@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Exportar Tabela de Gastos</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/inputmask@5.0.9/dist/jquery.inputmask.min.js"></script>
+        <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow-y: hidden;
+            background-color: #151515;
+            font-family: "Roboto", sans-serif;
+        }
+        main {
+            width: 50%;
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 4px 4px 7px rgba(0, 0, 0, 0.25);
+            color: #fff;
+        }
+        section { margin-top: 20px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #2d2d2d;
+            border-radius: 10px;
+            background-color: #151515;
+            color: #fff;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            font-weight: 400;
+        }
+        #dataForm label {
+            position: relative;
+            bottom: 25px;
+            right: 360px;
+            color: #fff;
+            padding: 2px 5px 2px 5px;
+            border: 1px solid;
+            background-color: #2d2d2d;
+            border-radius: 5px;
+        }
+        #gasto, #valor {
+            outline: none;
+            padding: 20px 10px 10px;
+            border-radius: 10px;
+            border: 1px solid #fff;
+            background-color: transparent;
+            color: #fff;
+            width: 40%;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #fff;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: transparent;
+        }
+        button:hover { background-color: #ffffff4b; }
+        #tableCaption { 
+            text-align: start; 
+            line-height: 25px;
+        }
+        #total {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Tabela de Gastos</h1>
+        
+        <section>
+            <form id="dataForm">
+                <input type="text" id="gasto" required>
+                <label for="gasto">Gasto</label>
+                <input type="number" id="valor" required>
+                <label for="valor">Valor</label><br>
+            </form>
+            <button type="button" id="addRowBtn">Adicionar</button>
+        </section>
+        
+        <section>
+            <table width="100%" id="myTable">
+                <thead>
+                    <tr>
+                        <th>Gasto</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+                <caption id="tableCaption">
+                    O total dos seus gastos apareceram aqui...
+                </caption>
+            </table>
+        </section>
+        
+        <section>
+            <button id="exportBtn">Exportar para CSV</button>
+            <button id="calculateBtn">Calcular Total</button>
+        </section>
+    </main>
+
+    <script>
+        let $ = jQuery;
+        $(document).ready(function() {
+            $('#valor').mask('#.##0,00', {reverse: true});
+            $('#addRowBtn').click(function() {
+                var gasto = $('#gasto').val();
+                var valor = $('#valor').val();
+                
+                if (gasto && valor) {
+                    var newRow = $('<tr>');
+                    newRow.append($('<td>').text(gasto));
+                    newRow.append($('<td>').text(valor));
+                    
+                    $('#myTable tbody').append(newRow);
+                    
+                    // Limpar os campos do formulário
+                    $('#dataForm')[0].reset();
+                } else {
+                    alert('Por favor, preencha todos os campos.');
+                }
+            });
+            
+            $('#exportBtn').click(function() {
+                exportTableToCSV('tabela.csv');
+            });
+
+            $('#calculateBtn').click(function() {
+                calculateTotal();
+            });
+
+            function exportTableToCSV(filename) {
+                var csv = [];
+                var rows = $('#myTable tr');
+                
+                rows.each(function() {
+                    var cols = $(this).find('td, th');
+                    var rowArray = [];
+                    
+                    cols.each(function() {
+                        var text = $(this).text().replace(/"/g, '""');
+                        rowArray.push('"' + text + '"');
+                    });
+                    
+                    csv.push(rowArray.join(','));
+                });
+                
+                // Adiciona o caption ao final do CSV
+                var captionText = $('#tableCaption').text().replace(/"/g, '""');
+                csv.push('"' + captionText + '"');
+                
+                var csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
+                var downloadLink = $('<a>');
+                
+                downloadLink.attr('download', filename);
+                downloadLink.attr('href', window.URL.createObjectURL(csvFile));
+                downloadLink.css('display', 'none');
+                $('body').append(downloadLink);
+                
+                downloadLink[0].click();
+                
+                downloadLink.remove();
+            }
+
+            function calculateTotal() {
+                var total = 0;
+                $('#myTable tbody tr').each(function() {
+                    var valor = $(this).find('td').eq(1).text();
+                    total += parseFloat(valor) || 0; // Adiciona o valor à soma, ignorando valores inválidos
+                });
+                var totalFormatted = 'R$' + total.toFixed(2);
+                $('#tableCaption').text('Seu gasto total foi de: ' + totalFormatted);
+            }
+        });
+    </script>
+</body>
+</html>
